@@ -84,6 +84,7 @@
       <SubSystem>Windows</SubSystem>
       <OutputFile>.\Release\hongsi3.exe</OutputFile>
       <AdditionalDependencies>odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -133,11 +134,17 @@
     <ClCompile Include="main.c" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="bitmap5.bmp" />
     <CustomBuild Include="gpdsIcon.bmp" />
     <CustomBuild Include="ICON2.ICO" />
     <CustomBuild Include="main.bmp" />
-    <CustomBuild Include="mycat.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="help.bmp" />
+    <None Include="hongsi.ico" />
+    <None Include="icon3.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

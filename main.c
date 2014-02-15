@@ -1,8 +1,8 @@
 /**************************************************************/
 /*              홍익대학교 시간표작성 도우미                    */
-/*															  */
+/*                                                            */
 /*                          HONGSI                            */
-/*															  */
+/*                                                            */
 /*                                         github.com/hongsi  */
 /**************************************************************/
 
@@ -18,9 +18,9 @@ int cnt = 0, next_chk = 0;	// cnt는 Date_list[cnt] 의 카운터로 쓰이다가 read()끝
 char table[16][8];	// 시간표(2차원 배열)
 char name[64] = {0,}, old_name[64] = {0,}, time[32];
 char name_list[32][64];	// 32과목, 과목명 32자까지 가능
-char prof_name[32] = {0,}, prof_list[16][32];
-char croom_name[32] = {0,}, croom_list[16][32];
-char state_str[256];
+char prof_name[32] = {0,}, prof_list[32][32];
+char croom_name[32] = {0,}, croom_list[32][32];
+char state_str[512];
 
 typedef struct Data *list_pointer;
 struct Data
@@ -30,13 +30,13 @@ struct Data
 	list_pointer next;
 };
 
-list_pointer Data_list[16],curr,ptr; // curr은 현재 노드, ptr은 새로 할당된 노드
+list_pointer Data_list[32],curr,ptr; // curr은 현재 노드, ptr은 새로 할당된 노드
 
 void start();
 int read(FILE *);	// 파일에서 읽어들임
-void analyse();		// 읽어들인 과목명과 강의시간 정보를 연속적으로 저장
+int analyse();		// 읽어들인 과목명과 강의시간 정보를 연속적으로 저장
 int what_day(char*);	// 한글 문자를 읽어 무슨 요일인지 판단
-void state();		// 읽어들인 과목들에 대한 정보 출력
+void state(int num_table);		// 읽어들인 과목들에 대한 정보 출력
 int make_table(FILE *);	// 가능한 수업의 조합을 계산하는 함수
 int insert_table(list_pointer, int);	// 시간표 배열에 수업을 삽입
 void restore(list_pointer);	// 지정한 수업을 시간표 배열에서 삭제
@@ -44,7 +44,7 @@ void init_table();	// 시간표 배열 초기화
 void print_table_head(FILE *);
 int ishangul2nd(byte *, int);  // 한글 두번째 바이트인지 체크 (한라프로, http://kldp.org/node/75688)
 void print_table(FILE *,int);	// 시간표 출력
-void free();		// 메모리 반환 <- 작업 필요
+void free();		// TODO: 메모리 반환
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 HINSTANCE g_hInst;
@@ -61,7 +61,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevIntance, LPSTR lpCmdLin
 	WndClass.cbWndExtra = 0;
 	WndClass.hbrBackground = (HBRUSH)GetStockObject(LTGRAY_BRUSH);
 	WndClass.hCursor = LoadCursor(NULL,IDC_ARROW);
-	WndClass.hIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_ICON2));
+	WndClass.hIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_ICON1));
 	WndClass.hInstance = hInstance;
 	WndClass.lpfnWndProc = (WNDPROC)WndProc;
 	WndClass.lpszClassName = lpszClass;
@@ -97,15 +97,6 @@ BOOL CALLBACK HelpDlgProc(HWND hDlg,UINT iMessage,WPARAM wParam,LPARAM lParam)
 		OldBitmap = (HBITMAP)SelectObject(MemDC, MyBitmap);
 		BitBlt(hdc,0,0,400,300,MemDC,0,0,SRCCOPY);
 		
-		/*SetBkMode(hdc,TRANSPARENT);
-		//SetTextAlign(hdc,TA_CENTER);
-		TextOut(hdc,20,20,"1. 메모장에 수강을 원하는 과목을 붙여넣고",41);
-		TextOut(hdc,20,40,"2. 파일명을 class.txt 로 하여",29);
-		TextOut(hdc,20,60,"3. hongsi.exe가 있는 폴더에 저장하세요.",39);
-		TextOut(hdc,20,90,"4. HONGSI의 실행이 끝나면 생성된 시간표가",42);
-		TextOut(hdc,20,110,"5. 같은 폴더에 시간표.html 로 저장되므로",40);
-		TextOut(hdc,20,130,"6. 메모장으로 열어서 인쇄할 수 있습니다.",41);*/	
-
 		SelectObject(MemDC,OldBitmap);
 		DeleteObject(MyBitmap);
 		DeleteDC(MemDC);
@@ -135,7 +126,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		CreateWindow("button","x",WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 			370,10,20,20,hWnd,(HMENU)2,g_hInst,NULL);
 		CreateWindow("button","Start !",WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			160,150,50,25,hWnd,(HMENU)1,g_hInst,NULL);	
+			190,142,50,25,hWnd,(HMENU)1,g_hInst,NULL);	
 		return 0;
 	case WM_DESTROY:
 		PostQuitMessage(0);
@@ -147,12 +138,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		OldBitmap = (HBITMAP)SelectObject(MemDC, MyBitmap);
 		BitBlt(hdc,0,0,400,300,MemDC,0,0,SRCCOPY);
 		
-		/*SetBkMode(hdc,TRANSPARENT);
-		SetTextAlign(hdc,TA_CENTER);
-		TextOut(hdc,200,20,"HongIk Univ. Timetable Planer",29);
-		TextOut(hdc,200,50,"HongSi",6);
-		TextOut(hdc,200,170,"LMN Programming Society",23);*/
-
 		SelectObject(MemDC,OldBitmap);
 		DeleteObject(MyBitmap);
 		DeleteDC(MemDC);
@@ -191,13 +176,16 @@ void start()
 	for (i = 0;i<32;i++)
 		unit_list[i] = 0;
 
+	for (i = 0; i<cnt; i++)
+		free(Data_list[i]);
+
 	cnt = 0, next_chk = 0; 
 
 	for (i = 0;i<16;i++)
 		for (j = 0;j<8;j++)
 			table[i][j] = '\0';
 
-	for (i = 0;i<32;i++)
+	for (i = 0;i<64;i++)
 	{
 		name[i] = '\0';
 		old_name[i] = '\0';
@@ -213,10 +201,18 @@ void start()
 	for (i = 0;i<256;i++)
 		state_str[i] = '\0';
 	
-	if (read(fp_r))	return;
+	if (read(fp_r))
+	{
+		fclose(fp_r);	
+		return;
+	}
 	fclose(fp_r);	
 
-	if (make_table(fp_w))	return;	
+	if (make_table(fp_w))
+	{
+		fclose(fp_w);
+		return;
+	}
 	fclose(fp_w);
 
 	GetCurrentDirectory(256, buffer);
@@ -227,13 +223,14 @@ void start()
 int read(FILE *fp_r)
 {
     int i, strcnt;
-	char c, str[32];
+	char c, str[64];
+	BOOL class_time_found = FALSE;
 	
 	if (fp_r == NULL)
 	{
 		MessageBox(hWnd,"class.txt 파일에 원하는 과목들을 붙여 넣으세요.","알림",MB_OK);
 		fp_r = fopen("class.txt","w");
-		fputs("이 파일에 클래스넷의 과목들을 긁어붙이세요.",fp_r);
+		fputs("이 파일에 클래스넷의 과목들을 긁어붙이세요.\n",fp_r);
 		fclose(fp_r);
 		return -1;
 	}
@@ -246,7 +243,7 @@ int read(FILE *fp_r)
 		while (c == ' ' || c == '\t')	
 			c = getc(fp_r);	// 공백이 연속인 경우
 		
-		if (i == 1 && c == EOF && Data_list[0] == NULL)
+		if (i == 1 && c == EOF && cnt == 0)
 		{
 			MessageBox(hWnd,"class.txt 가 비어있습니다.","알림",MB_OK);
 			return -1;
@@ -259,10 +256,10 @@ int read(FILE *fp_r)
 			c = getc(fp_r);		
 		}
 		str[strcnt] = '\0';	// 문자열 끝에 널문자 삽입		
-	
-		if (i == 1 && str[0] == '#')	// 라인 첫 문자가 '#'이면 라인 무시
+
+		if (i == 1 && (str[0] == '#' || str[0] == '`' || str[0] == '('))	// 라인 첫 문자가 '#', '`', '(' 이면 라인 무시. '(' 는 사이버강좌
 		{
-			while (c != '\n')	
+			while (c != '\n' && c != EOF)	
 				c = getc(fp_r);
 			
 			i = 0;
@@ -275,19 +272,23 @@ int read(FILE *fp_r)
 		else if (i == 4 && str[0]<0)	// 교양영역 항목을 만나면 카운트 하지 않음 (공통교양)
 		{
 			i--;
-			continue;
 		}
 		else if (i == 5)	// 과목명을 name에 저장
 		{
+			if (strlen(str) >= 3 && !strcmp(&str[strlen(str)-3],"(*)"))	// 과목명 끝에 붙는 '(*)' 제거. (영어진행 수업)
+			{
+				str[strlen(str)-3] = '\0';
+			}
+
 			strcpy(name,str);
 		}
 		else if (i == 6)	// 학점을 unit에 저장
 		{
-			if (!isdigit(str[0]))		// 과목명이 띄어쓰기 된 경우 (예: ADVANCED CAD)
+			if (str[0] < 48 || 57 < str[0])	// 숫자가 아니라면 과목명에 띄어쓰기 있는 경우임 (예: ADVANCED CAD, 중국어로 배우는)
 			{
-				//sprintf(name, "%s %s", name, str);
+				strcat(name," ");
+				strcat(name,str);
 				i--;
-				continue;
 			}
 
 			unit = atoi(str);
@@ -297,7 +298,10 @@ int read(FILE *fp_r)
 			if (what_day(str) >= 0)	// 교수명이 비어서 요일시간이 나오는 경우
 			{
 				strcpy(prof_name," ");
+
 				strcpy(time,str);
+				class_time_found = TRUE;
+
 				i++;
 			}
 			else
@@ -312,27 +316,33 @@ int read(FILE *fp_r)
 		else if (i == 12 && what_day(str) >= 0)	// 요일및시간을 time에 저장
 		{
 			strcpy(time,str);
-			//analyse();
-			
-			//printf("%s %s\n",name,time);	// 입력받은 정보 확인용		
+			class_time_found = TRUE;
 		}
 		else if (i == 13)
 		{
 			strcpy(croom_name,str);
-			analyse();
 		}
-		
-		if (c == '\n')	 // 강의실 유무, 비고 유무 문제 해결
+	
+		if (c == '\n')
 		{					
-			/*if (i >= 10 && time[0] == '\0')	// 요일및시간이 비어있는 경우		
-				printf(" <알림> 요일및시간이 비어있는 강의는 무시됩니다 : %s\n",name);*/
+			if (class_time_found && analyse())	// 읽은 라인을 analyse()에서 강의데이터로 변형
+			{
+				MessageBox(hWnd,"class.txt 에 수강정보가 비현실적으로 많습니다. (32과목 이상)","알림",MB_OK);
+				return -1;
+			}
 
 			i = 0;
-			continue;
+			class_time_found = FALSE;
 		}
 		else if (c == EOF)	// EOF 를 만나면 끝냄
 		{
-			if (Data_list[0] == NULL || Data_list[0]->time_list[0] == 0)	// 아무 소득없이 끝날 경우
+			if (class_time_found && analyse())	// 읽은 라인을 analyse()에서 강의데이터로 변형
+			{
+				MessageBox(hWnd,"class.txt 에 수강정보가 비현실적으로 많습니다. (32과목 이상)","알림",MB_OK);
+				return -1;
+			}
+
+			if (cnt == 0)	// 아무 소득없이 끝날 경우
 			{
 				MessageBox(hWnd,"class.txt 에 올바른 수강신청 정보가 없습니다.","알림",MB_OK);
 				return -1;
@@ -340,11 +350,12 @@ int read(FILE *fp_r)
 			else			// 정상 종료.
 				return 0;
 		}
+		
 	}
 	return 0;
 }
 
-void analyse()
+int analyse()
 {
 	int i = 0, j = 0, k, temp;
 	int old_cnt = 0, exist = 0;
@@ -362,6 +373,7 @@ void analyse()
 			break;
 		}
 	}
+
 	if (!exist)	// 새로운 과목 발견이면
 	{		
 		strcpy(name_list[cnt],name);	// 과목명 리스트에 추가
@@ -369,6 +381,11 @@ void analyse()
 		strcpy(croom_list[cnt],croom_name);	// 강의실
 		unit_list[cnt] = unit;	// 학점 리스트에 추가
 		Data_list[cnt++] = curr = ptr;		// Data_list의 새로운 방과 노드연결
+
+		if (cnt >= 32)
+		{
+			return -1;	// 32과목 이상은 무시
+		}
 	}
 	else		// 이미 존재하는 과목이면
 	{		
@@ -378,7 +395,7 @@ void analyse()
 			if (!strcmp(curr->time,time))	// 같은 과목, 같은 시간이면 저장취소
 			{
 				free(ptr);
-				return;			
+				return 0;			
 			}
 			if (curr->next == NULL)	// 노드 끝을 만나면 loop 중지
 				break;	
@@ -411,11 +428,21 @@ void analyse()
 				curr->time_list[j-1] = 11;
 				i++;
 			}
-			else if (curr->time_list[j-3] + 1 == curr->time_list[j-1] * 10 + ((int)time[i] - 48))  // 12, 13, .. 교시
+			else if (curr->time_list[j-1] == 1 && (int)time[i] == 50 && ((int)time[i-2] >= 48 || (int)time[i+1] == 49))	 // 12교시
+			{
+				curr->time_list[j-1] = 12;
+				i++;
+			}
+			else if (curr->time_list[j-1] == 1 && (int)time[i] == 51)	 // 13교시
+			{
+				curr->time_list[j-1] = 13;
+				i++;
+			}
+			/*else if (curr->time_list[j-3] + 1 == curr->time_list[j-1] * 10 + ((int)time[i] - 48))  // 12, 13, .. 교시
 			{
 				curr->time_list[j-1] = curr->time_list[j-1] * 10 + ((int)time[i] - 48);
 				i++;
-			}
+			}*/
 		}		
 		if (time[i] == ',')	i++;		
 	}
@@ -428,6 +455,8 @@ void analyse()
 		curr->time_list[i+1] = temp;		
 	}
 	strcpy(old_name,name);
+
+	return 0;
 }
 
 int what_day(char* str)	// 문자열의 첫글자가 무슨요일인지 판별
@@ -441,59 +470,42 @@ int what_day(char* str)	// 문자열의 첫글자가 무슨요일인지 판별
 	else return -1;
 }
 
-void state()
+void state(int num_table)
 {	
-	int i,j,k;
-	char str[32];
+	int i, j, k, tab_length;
+	char str[64];
 		
 	for (i = 0,j = 0;i<cnt;i++)
 		j += unit_list[i];
 
-	sprintf(state_str,"\n모두 %d과목, %d학점입니다.\n",cnt,j);
+	sprintf(state_str,"\n[시간표 %d개] 총 %d과목 %d학점\n",num_table,cnt,j);
 
 	for (i = 0,j = 0;i<cnt;i++)	// 과목 이름과 학점
 	{
-		//putchar('\n');
 		strcat(state_str,"\n");
-		//putchar(' ');
-		//strcat(state_str," ");
+
 		for (j = 0;name_list[i][j];j++)
 		{
 			sprintf(str,"%c",name_list[i][j]);
 			strcat(state_str,str);
 		}
-		for (k = 0;(unsigned)k<2-(strlen(name_list[i])+1)/10;k++)
-			//putchar('\t');
+
+		tab_length = 3 - (strlen(name_list[i])+1) / 10;
+		for (k = 0;k < tab_length;k++)
+		{
 			strcat(state_str,"\t");
-		sprintf(str,"(%d학점)   ",unit_list[i]);
+		}
+
+		sprintf(str," (%d학점)   ",unit_list[i]);
 		strcat(state_str,str);
 	}
-	//puts("\n");
-	//strcat(state_str,"\n");
-	
-	/*list_pointer now;		
-	for (i = 0;i<cnt;i++)	// 강의시간 정보
-	{
-		now = Data_list[i];
-		do{
-			while (now->time_list[j] != -1)
-			{
-				printf("%d ",now->time_list[j++]);
-			}
-			j = 0;
-			putchar('\n');
-			now = now->next;
-		}while (now != NULL);
-
-		putchar('\n');
-	}*/	
 }
 
 int make_table(FILE *fp_w)
 {	
 	int i, num_table = 1;	
 	
-	list_pointer lec_ptr[24];	// 각 과목들을 가리키는 포인터
+	list_pointer lec_ptr[32];	// 각 과목들을 가리키는 포인터
 	
 	for (i = 0;i<cnt;i++)
 	{
@@ -520,13 +532,13 @@ int make_table(FILE *fp_w)
 					{
 						if (--num_table)
 						{
-							state();
+							state(num_table);
 							MessageBox(hWnd,state_str,"알림",MB_OK);
 							return 0;
 						}
 						else
 						{
-							state();
+							//state();
 							MessageBox(hWnd,"모든 조건을 만족하는 시간표가 없습니다.","알림",MB_OK);
 							return -1;
 						}
@@ -551,13 +563,13 @@ int make_table(FILE *fp_w)
 			{
 				if (--num_table)
 				{
-					state();					
+					state(num_table);					
 					MessageBox(hWnd,state_str,"알림",MB_OK);
 					return 0;
 				}
 				else
 				{
-					state();				
+					//state();				
 					MessageBox(hWnd,"모든 조건을 만족하는 시간표가 없습니다.","알림",MB_OK);
 					return -1;
 				}
@@ -609,7 +621,7 @@ void init_table()
 
 void print_table_head(FILE *fp_w)	// IE security warning 제거 (http://msdn.microsoft.com/en-us/library/ms537628(v=vs.85).ASPX)
 {
-	fprintf(fp_w,"<HTML>\n<HEAD><TITLE> 시간표 </TITLE></HEAD>\n\n<style type = \"text/css\">\n\nBODY,TD,DIV,LI	{ FONT-FAMILY : APPLEGOTHIC,굴림,SANS-SERIF; FONT-SIZE : 9PT; COLOR : #333; TEXT-ALIGN : CENTER; LINE-HEIGHT : 150%%;}\nTABLE { border-collapse: collapse; }\nTD { WIDTH : 70; HEIGHT : 20; border: 1px solid #E8E8E8; }\nTD.DAY { BACKGROUND-COLOR : #CCFFFF; }\nTD.CLASSNUM { BACKGROUND-COLOR : #FFF4FF; }\nTD.CLASS01 { BACKGROUND-COLOR : #C3D2F1; }\nTD.CLASS02 { BACKGROUND-COLOR : #FFEDBB; }\nTD.CLASS03 { BACKGROUND-COLOR : #DEE6D0; }\nTD.CLASS04 { BACKGROUND-COLOR : #F6CCCD; }\nTD.CLASS05 { BACKGROUND-COLOR : #D9CDEE; }\nTD.CLASS06 { BACKGROUND-COLOR : #CADED8; }\nTD.CLASS07 { BACKGROUND-COLOR : #FAD9BE; }\nTD.CLASS08 { BACKGROUND-COLOR : #E9D0DC; }\nTD.CLASS09 { BACKGROUND-COLOR : #FBFCBD; }\nTD.CLASS10 { BACKGROUND-COLOR : #CFDEEA; }\nTD.CLASS11 { BACKGROUND-COLOR : #D7CFDC; }\nTD.CLASS12 { BACKGROUND-COLOR : #F3EAD1; }\n\n#hintbox{ position:absolute; top: 0; background-color: lightyellow; width: 150px; \npadding: 3px; border:1px solid black; font:normal 11px Verdana; line-height:18px;\nz-index:100; visibility: hidden; }\n\n</style>\n\n");
+	fprintf(fp_w,"<HTML>\n<HEAD><TITLE> 시간표 </TITLE></HEAD>\n\n<style type = \"text/css\">\n\nBODY,TD,DIV,LI	{ FONT-FAMILY : APPLEGOTHIC,굴림,SANS-SERIF; FONT-SIZE : 9PT; COLOR : #333; TEXT-ALIGN : CENTER; LINE-HEIGHT : 150%%;}\nTABLE { border-collapse: collapse; }\nTD { WIDTH : 70; HEIGHT : 20; border: 1px solid #E8E8E8; }\nTD.DAY { BACKGROUND-COLOR : #CCFFFF; }\nTD.CLASSNUM { BACKGROUND-COLOR : #FFF4FF; }\nTD.CLASS01 { BACKGROUND-COLOR : #C3D2F1; }\nTD.CLASS02 { BACKGROUND-COLOR : #FFEDBB; }\nTD.CLASS03 { BACKGROUND-COLOR : #DEE6D0; }\nTD.CLASS04 { BACKGROUND-COLOR : #F6CCCD; }\nTD.CLASS05 { BACKGROUND-COLOR : #D9CDEE; }\nTD.CLASS06 { BACKGROUND-COLOR : #CADED8; }\nTD.CLASS07 { BACKGROUND-COLOR : #FAD9BE; }\nTD.CLASS08 { BACKGROUND-COLOR : #E9D0DC; }\nTD.CLASS09 { BACKGROUND-COLOR : #FBFCBD; }\nTD.CLASS10 { BACKGROUND-COLOR : #F3DCF2; }\nTD.CLASS11 { BACKGROUND-COLOR : #D9EFB9; }\nTD.CLASS12 { BACKGROUND-COLOR : #F3EAD1; }\n\n#hintbox{ position:absolute; top: 0; background-color: lightyellow; width: 150px; \npadding: 3px; border:1px solid black; font:normal 11px Verdana; line-height:18px;\nz-index:100; visibility: hidden; }\n\n</style>\n\n");
 	fprintf(fp_w,"<!-- saved from url=(0014)about:internet -->\n\n<script type = \"text/javascript\">\n\nvar horizontal_offset = \"5px\"\nvar vertical_offset = \"0\"\nvar ie = document.all\nvar ns6 = document.getElementById&&!document.all\nvar tipwidth = 130\n\nfunction getposOffset(what, offsettype){\nvar totaloffset = (offsettype == \"left\")? what.offsetLeft : what.offsetTop;\nvar parentEl = what.offsetParent;\nwhile (parentEl != null){\ntotaloffset = (offsettype == \"left\")? totaloffset+parentEl.offsetLeft : totaloffset+parentEl.offsetTop;\nparentEl = parentEl.offsetParent;\n}\nreturn totaloffset;\n}\n\nfunction iecompattest(){\nreturn (document.compatMode && document.compatMode != \"BackCompat\")? document.documentElement : document.body\n}\n\nfunction clearbrowseredge(obj, whichedge){\nvar edgeoffset = (whichedge == \"rightedge\")? parseInt(horizontal_offset)*-1 : parseInt(vertical_offset)*-1\nif (whichedge == \"rightedge\"){\nvar windowedge = ie && !window.opera? iecompattest().scrollLeft+iecompattest().clientWidth-30 : window.pageXOffset+window.innerWidth-40\ndropmenuobj.contentmeasure = dropmenuobj.offsetWidth\nif (windowedge-dropmenuobj.x < dropmenuobj.contentmeasure)\nedgeoffset = dropmenuobj.contentmeasure+obj.offsetWidth+parseInt(horizontal_offset)\n}\nelse{\nvar windowedge = ie && !window.opera? iecompattest().scrollTop+iecompattest().clientHeight-15 : window.pageYOffset+window.innerHeight-18\ndropmenuobj.contentmeasure = dropmenuobj.offsetHeight\nif (windowedge-dropmenuobj.y < dropmenuobj.contentmeasure)\nedgeoffset = dropmenuobj.contentmeasure-obj.offsetHeight\n}\nreturn edgeoffset\n}\n\n");
 	fprintf(fp_w,"function showhint(menucontents, obj, e){\nif ((ie||ns6) && document.getElementById(\"hintbox\")){\ndropmenuobj = document.getElementById(\"hintbox\")\ndropmenuobj.innerHTML = menucontents\ndropmenuobj.style.left = dropmenuobj.style.top = -500\nif (tipwidth != \"\"){\ndropmenuobj.widthobj = dropmenuobj.style\ndropmenuobj.widthobj.width = tipwidth\n}\ndropmenuobj.x = getposOffset(obj, \"left\")\ndropmenuobj.y = getposOffset(obj, \"top\")\ndropmenuobj.style.left = dropmenuobj.x-clearbrowseredge(obj, \"rightedge\")+obj.offsetWidth+\"px\"\ndropmenuobj.style.top = dropmenuobj.y-clearbrowseredge(obj, \"bottomedge\")+\"px\"\ndropmenuobj.style.visibility = \"visible\"\nobj.onmouseout = hidetip\n}\n}\n\nfunction hidetip(e){\ndropmenuobj.style.visibility = \"hidden\"\ndropmenuobj.style.left = \"-500px\"\n}\n\nfunction createhintbox(){\nvar divblock = document.createElement(\"div\")\ndivblock.setAttribute(\"id\", \"hintbox\")\ndocument.body.appendChild(divblock)\n}\n\nif (window.addEventListener)\nwindow.addEventListener(\"load\", createhintbox, false)\nelse if (window.attachEvent)\nwindow.attachEvent(\"onload\", createhintbox)\nelse if (document.getElementById)\nwindow.onload = createhintbox\n\n</script>\n\n<BODY>\n<center>\n");
 	//fprintf(fp_w,"과목명 위에 마우스를 올리면 교수님 성함과 강의실이 나타납니다.\n");	// TODO: 교수님 성함과 강의실 보이도록 변경
