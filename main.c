@@ -169,8 +169,6 @@ void start()
 	char buffer[256] = {0,};
 
 	FILE *fp_r,*fp_w;
-	fp_r = fopen("class.txt","r");
-	fp_w = fopen("시간표.html","w");	
 	
 	unit = 0;
 	for (i = 0;i<32;i++)
@@ -198,15 +196,30 @@ void start()
 		for (j = 0;j<64;j++)
 			name_list[i][j] = '\0';
 		
-	for (i = 0;i<256;i++)
+	for (i = 0;i<512;i++)
 		state_str[i] = '\0';
 	
+	fp_r = fopen("class.txt","r");
+	
+	if (fp_r == NULL)
+	{
+		MessageBox(hWnd,"class.txt 파일에 원하는 과목들을 붙여 넣으세요.","알림",MB_OK);
+
+		fp_w = fopen("class.txt","w");
+		fputs("이 파일에 클래스넷의 과목들을 긁어붙이세요.\n",fp_w);
+		fclose(fp_w);
+
+		return -1;
+	}
+
 	if (read(fp_r))
 	{
-		fclose(fp_r);	
+		fclose(fp_r);
 		return;
 	}
 	fclose(fp_r);	
+
+	fp_w = fopen("시간표.html","w");	
 
 	if (make_table(fp_w))
 	{
@@ -225,15 +238,6 @@ int read(FILE *fp_r)
     int i, strcnt;
 	char c, str[64];
 	BOOL class_time_found = FALSE;
-	
-	if (fp_r == NULL)
-	{
-		MessageBox(hWnd,"class.txt 파일에 원하는 과목들을 붙여 넣으세요.","알림",MB_OK);
-		fp_r = fopen("class.txt","w");
-		fputs("이 파일에 클래스넷의 과목들을 긁어붙이세요.\n",fp_r);
-		fclose(fp_r);
-		return -1;
-	}
 	
 	for (i = 1;c = getc(fp_r);i++)
 	{
